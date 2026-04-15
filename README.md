@@ -199,7 +199,7 @@ make clean
 ---
 ## 👥 Team
 
-> **Group: Linux_Newbies** — CO2018 Operating Systems, Semester 2 — 2024–2025
+> **Group: Linux_Newbies** — CO2018 Operating Systems, Semester 2 — 2025–2026
 
 | Role | Responsibility |
 |---|---|
