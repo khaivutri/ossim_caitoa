@@ -14,7 +14,7 @@ Simulation of a Multi-tasking Operating System focusing on Multi-level Queue Sch
 **A modular operating system simulator featuring process scheduling, virtual memory management, and kernel-mode system calls.**
 
 *CO2018 — Operating Systems | Ho Chi Minh City University of Technology (HCMUT)*
-*Group 4 — Faculty of Computer Science & Engineering*
+*Linus_Newbies — Faculty of Computer Science & Engineering*
 
 ---
 
