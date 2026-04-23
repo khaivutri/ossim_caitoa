@@ -8,6 +8,8 @@
  * for the sole purpose of studying while attending the course CO2018.
  */
 
+#include "common.h"
+#include "os-cfg.h"
 #include "queue.h"
 #include "sched.h"
 #include <pthread.h>
@@ -63,9 +65,27 @@ struct pcb_t * get_mlq_proc(void) {
 	/*TODO: get a process from PRIORITY [ready_queue].
 	 *      It worth to protect by a mechanism.
 	 * */
+	int prio=0;
+	for (prio=0; prio < MAX_PRIO; prio++){
+		if(!empty(&mlq_ready_queue[prio])){
+			if (slot[prio] >0){
+				proc = dequeue(&mlq_ready_queue[prio]);
+				slot[prio]--;
+				break;
+			}
+		}
+	}
 
-	if (proc != NULL)
+	if ( proc != NULL){
 		enqueue(&running_list, proc);
+	}
+
+	if ( proc == NULL && queue_empty() != -1){
+		for ( prio=0; prio < MAX_PRIO; prio++){
+			slot[prio] = MAX_PRIO - prio;
+		}
+	}
+	pthread_mutex_unlock(&queue_lock);
 	return proc;	
 }
 
@@ -80,7 +100,10 @@ void put_mlq_proc(struct pcb_t * proc) {
 	 */
 
 	pthread_mutex_lock(&queue_lock);
+
+	purgequeue(&running_list, proc);
 	enqueue(&mlq_ready_queue[proc->prio], proc);
+
 	pthread_mutex_unlock(&queue_lock);
 }
 
@@ -119,7 +142,20 @@ struct pcb_t * get_proc(void) {
 	 *       It worth to protect by a mechanism.
 	 * 
 	 */
+	
+	if (empty(&ready_queue) && !empty(&run_queue)){
+		while (!empty(&run_queue)){
+			enqueue(&ready_queue, dequeue(&run_queue));
+		}
+	}
 
+	if (!emty(&ready_queue)){
+		proc = dequeue(&ready_queue);
+	}
+	
+	if (proc != NULL){
+		enqueue(&running_list, proc);
+	}
 	pthread_mutex_unlock(&queue_lock);
 
 	return proc;
@@ -135,7 +171,10 @@ void put_proc(struct pcb_t * proc) {
 	 */
 
 	pthread_mutex_lock(&queue_lock);
+
+	purgequeue(&running_list, proc);
 	enqueue(&run_queue, proc);
+	
 	pthread_mutex_unlock(&queue_lock);
 }
 
