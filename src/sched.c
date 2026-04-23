@@ -80,7 +80,7 @@ struct pcb_t * get_mlq_proc(void) {
 		enqueue(&running_list, proc);
 	}
 
-	if ( proc == NULL && queue_empty() != -1){
+	if ( proc == NULL && queue_empty() == -1){
 		for ( prio=0; prio < MAX_PRIO; prio++){
 			slot[prio] = MAX_PRIO - prio;
 		}
