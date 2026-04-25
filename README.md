@@ -142,12 +142,12 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 │   ├── mm.c             # Memory management (allocation, freeing, vm_area)
 │   ├── paging.c         # 5-level page table & swap logic
 │   └── syscall.c        # System call dispatcher & user-kernel data transfer
-│
+│   └── ....
 ├── include/
 │   ├── pcb_t.h          # Process Control Block definition
 │   ├── mm_struct.h      # Memory management structures
 │   └── krnl_t.h         # Kernel state and configuration types
-│
+│   └──....
 ├── input/
 │   ├── *.conf           # Hardware configuration files
 │   └── *.proc           # Simulated program descriptions
@@ -205,7 +205,7 @@ make clean
 |---|---|
 | [Vu Tri Khai](https://github.com/khaivutri) |Scheduling |
 | [Nguyen Tien Nam](https://github.com/tiennam-nguyen) |Memory Layout+ VM Mapping+ Physical Memory |
-| [Nguyen Huu Khanh](https://github.com/Khanhhuu766) |Paging Address Translation+ Memory Ops) |
+| [Nguyen Huu Khanh](https://github.com/Khanhhuu766) |Paging Address Translation+ Memory Ops |
 | [Nguyen Nguyen Hung](https://github.com/NguyenHung2006) |Synchronization+ System Call+ Put It All Together |
 
 *Faculty of Computer Science & Engineering, HCMUT*
