@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-
+#define PID_MAX 255
 #ifndef OSCFG_H
 #include "os-cfg.h"
 #endif
@@ -46,14 +46,12 @@ typedef ARG_TYPE arg_t;
 #define FORMAT_ARG "%u"
 #endif
 
-
-enum ins_opcode_t
-{
-	CALC,  // Just perform calculation, only use CPU
-	ALLOC, // Allocate memory
-	FREE,  // Deallocated a memory block
-	READ,  // Write data to a byte on memory
-	WRITE, // Read data from a byte on memory
+enum ins_opcode_t {
+    CALC,              // Just perform calculation, only use CPU
+    ALLOC,             // Allocate memory
+    FREE,              // Deallocated a memory block
+    READ,              // Write data to a byte on memory
+    WRITE,             // Read data from a byte on memory
     KMALLOC,           // Allocate kernel memory
     KMEM_CACHE_CREATE, // Create kernel cache pool
     KMEM_CACHE_ALLOC,  // Allocate cache memory in cache pool
@@ -111,6 +109,7 @@ struct pcb_t {
     struct krnl_t *krnl;
     struct page_table_t *page_table; // Page table
     uint32_t bp;                     // Break pointer
+    struct pcb_t *proc_table[PID_MAX];
 #ifdef MM_PAGING
     struct mm_struct *mm;
     struct memphy_struct *mram;
