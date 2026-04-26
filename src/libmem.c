@@ -74,7 +74,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
     pthread_mutex_lock(&mmvm_lock);
     struct vm_rg_struct rgnode;
     struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
-    int inc_sz = 0;
+    // int inc_sz = 0;
 
     if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0) {
         caller->krnl->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;

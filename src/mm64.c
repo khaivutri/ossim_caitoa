@@ -196,7 +196,7 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff) {
         printf("pte_set_swap: Invalid caller/mm pointer!\n");
         return -1;
     }
-    struct krnl_t *krnl = caller->krnl;
+    // struct krnl_t *krnl = caller->krnl;
     addr_t *pte;
 #ifdef MM64
     /* Get value from the system */
@@ -229,7 +229,7 @@ int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn) {
     if (caller == NULL || caller->krnl == NULL) {
         return -1;
     }
-    struct krnl_t *krnl = caller->krnl;
+    // struct krnl_t *krnl = caller->krnl;
     addr_t *pte;
 
 #ifdef MM64
@@ -292,7 +292,7 @@ int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
         printf("pte_set_entry: Invalid caller/mm pointer!\n");
         return -1;
     }
-    struct krnl_t *krnl = caller->krnl;
+    // struct krnl_t *krnl = caller->krnl;
 #ifdef MM64
     uint64_t *pte_ptr = get_pte_ptr(caller, pgn, 1);
     if (pte_ptr != NULL) {
@@ -319,7 +319,7 @@ int vmap_pgd_memset(struct pcb_t *caller, // process call
     }
     int pgit = 0;
     uint64_t pattern = 0xdeadbeef;
-    struct krnl_t *krnl = caller->krnl;
+    // struct krnl_t *krnl = caller->krnl;
 
     // TO-DO memset the page table with given pattern
     for (pgit = 0; pgit < pgnum; pgit++) {
