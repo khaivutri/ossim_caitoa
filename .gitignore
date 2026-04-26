@@ -54,11 +54,8 @@ dkms.conf
 # debug information files
 *.dwo
 
-# --- MEMPHY Test Suite (Only stub/temporary files in src) ---
-src/mm.h
-src/test_memphy.c
-src/test_memphy
-src/Makefile.test
+#documents
+docs/
 
-# --- Build artifacts ---
-src/*.o
+#config
+compile_flags.txt
