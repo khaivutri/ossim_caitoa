@@ -4,7 +4,7 @@
 #include "common.h"
 
 /* CPU Bus definition */
-#define PAGING_CPU_BUS_WIDTH 64 /* 22bit bus - MAX SPACE 4MB */
+#define PAGING_CPU_BUS_WIDTH 22 /* 22bit bus - MAX SPACE 4MB */
 #define PAGING_PAGESZ 256       /* 256B or 8-bits PAGE NUMBER */
 #define PAGING_MEMRAMSZ BIT(21)
 #define PAGING_PAGE_ALIGNSZ(sz) (DIV_ROUND_UP(sz, PAGING_PAGESZ) * PAGING_PAGESZ)
