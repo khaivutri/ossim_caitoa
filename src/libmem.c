@@ -238,7 +238,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller) {
         /* TO-DO: Play with your paging theory here */
         /* Get free frame in MEMSWP */
         // Kiểm tra ram đã đầy hay chưa
-        if (MEMPHY_get_freefp(caller->krnl->mram, &swpfpn) == -1) {
+        if (MEMPHY_get_freefp(caller->krnl->mram, &tgtfpn) == -1) {
             /* Find victim page */
             if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
                 return -1;
@@ -365,7 +365,6 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller) 
 
     _syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
 
-    return 0;
     return 0;
 }
 
