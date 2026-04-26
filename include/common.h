@@ -109,7 +109,6 @@ struct pcb_t {
     struct krnl_t *krnl;
     struct page_table_t *page_table; // Page table
     uint32_t bp;                     // Break pointer
-    struct pcb_t *proc_table[PID_MAX];
 #ifdef MM_PAGING
     struct mm_struct *mm;
     struct memphy_struct *mram;
@@ -124,6 +123,7 @@ struct krnl_t {
     struct queue_t *running_list;
 #ifdef MLQ_SCHED
     struct queue_t *mlq_ready_queue;
+    struct pcb_t *proc_table[PID_MAX];
 #endif
 #ifdef MM_PAGING
     struct mm_struct *mm;
