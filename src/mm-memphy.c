@@ -187,7 +187,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
    struct framephy_struct *fp = mp->free_fp_list;
    while (fp != NULL)
    {
-      printf("%d ", fp->fpn);
+      printf(FORMAT_ARG " ", fp->fpn);
       free_cnt++;
       fp = fp->fp_next;
    }
@@ -199,7 +199,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
    fp = mp->used_fp_list;
    while (fp != NULL)
    {
-      printf("%d ", fp->fpn);
+      printf(FORMAT_ARG " ", fp->fpn);
       used_cnt++;
       fp = fp->fp_next;
    }
