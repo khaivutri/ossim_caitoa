@@ -33,7 +33,7 @@
 // }
 #ifdef MM64
 // Hàm Helper: Trả về địa chỉ con trỏ của PTE thật sự trong cây 5 cấp
-static uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
+uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     if (caller == NULL || caller->krnl == NULL)
         return NULL;
 
