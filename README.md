@@ -8,6 +8,7 @@ Simulation of a Multi-tasking Operating System focusing on Multi-level Queue Sch
 <img src="https://img.shields.io/badge/Language-C-A8B9CC?style=for-the-badge&logo=c&logoColor=white"/>
 <img src="https://img.shields.io/badge/Platform-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black"/>
 <img src="https://img.shields.io/badge/Status-Complete-2ea44f?style=for-the-badge"/>
+<img src="https://github.com/khaivutri/ossim_caitoa/actions/workflows/c-cpp.yml/badge.svg" alt="C/C++ CI Status"/>
 
 # 🖥️ Simple Operating System Simulation
 
@@ -30,6 +31,7 @@ Simulation of a Multi-tasking Operating System focusing on Multi-level Queue Sch
   - [Kernel Interface & System Calls](#3-kernel-interface--system-calls)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
+- [Continuous Integration (CI)](#️-continuous-integration-ci)
 - [Team](#-team)
 - [License](#-license)
 
@@ -50,6 +52,9 @@ The system is designed to run on **virtual hardware** supporting multiple CPUs a
 ---
 
 ## 🏛️ Architecture
+
+The OS manages two virtual resources — CPU(s) and RAM — through a **Scheduler/Dispatcher** and a **Virtual Memory Engine**. A hardware-supported mode bit enforces strict separation between user-mode and kernel-mode execution, preventing unauthorized access to privileged resources.
+
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -89,6 +94,10 @@ Implements a **Multi-Level Queue (MLQ)** scheduling policy modelled after the Li
 
 Higher-priority processes receive more CPU time, ensuring responsiveness-critical tasks are handled first.
 
+<p align="center">
+  <img src="assets/img/scheduler.png" alt="Scheduler" width="700"/>
+</p>
+
 ---
 
 ### 2. Virtual Memory Management
@@ -108,14 +117,11 @@ A comprehensive **paging-based** memory system providing full isolation of proce
 - **Segmentation + Paging:** Memory areas (`vm_area_struct`) map contiguous virtual regions to discrete physical frames.
 - **Swapping Mechanism:** A page-replacement policy moves pages between **RAM** and **SWAP** storage when physical memory is under pressure.
 
-```
-Virtual Address (64-bit)
-┌──────┬──────┬──────┬──────┬──────┬────────────┐
-│ PGD  │ P4D  │ PUD  │ PMD  │  PT  │   Offset   │
-└──────┴──────┴──────┴──────┴──────┴────────────┘
-   │      │      │      │      │
-   └──────┴──────┴──────┴──────┴──► Physical Frame
-```
+The diagram below shows how a virtual address is decomposed and walked through each level of the page-table hierarchy to resolve a physical frame:
+
+<p align="center">
+  <img src="assets/img/fig3_paging_translation.svg" alt="Paging Address Translation — 32-bit and 64-bit schemes" width="700"/>
+</p>
 
 ---
 
@@ -135,25 +141,30 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 
 ## 📂 Project Structure
 
-```
+```text
 .
-├── src/
-│   ├── sched.c          # Multi-Level Queue process scheduler
-│   ├── mm.c             # Memory management (allocation, freeing, vm_area)
-│   ├── paging.c         # 5-level page table & swap logic
-│   └── syscall.c        # System call dispatcher & user-kernel data transfer
-│   └── ....
-├── include/
-│   ├── pcb_t.h          # Process Control Block definition
-│   ├── mm_struct.h      # Memory management structures
-│   └── krnl_t.h         # Kernel state and configuration types
-│   └──....
-├── input/
-│   ├── *.conf           # Hardware configuration files
-│   └── *.proc           # Simulated program descriptions
-│
-├── Makefile
-└── README.md
+├── include/               # System Header Files
+│   ├── cpu.h              # CPU architecture and register definitions
+│   ├── mm.h               # Virtual memory management structures
+│   ├── sched.h            # MLQ scheduler definitions
+│   ├── syscall.h          # System call interface definitions
+│   └── os-cfg.h           # Global OS configuration and constants
+├── src/                   # Core Implementation (Kernel & Modules)
+│   ├── os.c               # Simulation entry point and main loop
+│   ├── cpu.c              # Instruction execution and CPU simulation
+│   ├── sched.c            # Multi-Level Queue scheduling logic
+│   ├── mm.c               # Memory management unit (MMU) logic
+│   ├── mm-vm.c            # Virtual Memory Area (VMA) management
+│   ├── mm-memphy.c        # Physical memory simulation
+│   ├── paging.c           # Page table and swap implementation
+│   ├── syscall.c          # System call dispatcher and handling
+│   └── loader.c           # Process and hardware configuration loader
+├── input/                 # Simulation Inputs
+│   ├── proc/              # Simulated process description files (.proc)
+│   └── os_*/              # Hardware and OS configuration files
+├── output/                # Simulation execution results
+├── Makefile               # Build system configuration
+└── run.sh                 # Batch simulation execution script
 ```
 
 ---
@@ -162,39 +173,64 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 
 ### Prerequisites
 
-- GCC (≥ 9.0) or any C11-compatible compiler
-- GNU Make
-- Linux/macOS environment (or WSL on Windows)
+Ensure your environment meets the following requirements:
+- **Operating System**: Linux, macOS, or WSL (Windows Subsystem for Linux)
+- **Compiler**: GCC 9.0+ or any C11-compatible compiler
+- **Build Tool**: GNU Make
 
-### Build
+### Installation
 
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/ossim_caitoa.git
+   cd ossim_caitoa
+   ```
+
+2. **Build the project**:
+   ```bash
+   make
+   ```
+   This command compiles the source code and generates the `os` executable in the project root.
+
+### Usage
+
+The simulation requires a configuration file located in the `input/` directory. Provide the **filename only** (the system automatically prepends the path).
+
+**Example Command**:
 ```bash
-# Clone the repository
-git clone https://github.com/<your-repo>/ossim.git
-cd ossim
-
-# Compile all modules
-make all
+./os os_1_mlq_paging
 ```
 
-### Run
-
+#### Automated Test Suite
+To run all pre-configured simulation scenarios at once:
 ```bash
-# Execute the simulation with a hardware configuration file
-./os [configure_file]
+chmod +x run.sh
+./run.sh
 ```
+The results will be generated in the `output/` directory.
 
-**Example:**
-
-```bash
-./os input/os_1_mlq_paging.conf
-```
-
-### Clean Build Artifacts
-
+### Maintenance
+To clean build artifacts and reset the environment:
 ```bash
 make clean
 ```
+
+---
+
+## ⚙️ Continuous Integration (CI)
+
+To ensure code reliability and automate the testing process, this repository is fully integrated with a **GitHub Actions** CI pipeline.
+
+### Pipeline Overview
+The workflow is defined in `.github/workflows/c-cpp.yml` and triggers automatically on every push or pull request to the `main` branch. It performs the following automated checks:
+
+1. **Environment Provisioning**: Sets up an `ubuntu-latest` runner equipped with `build-essential`.
+2. **Compilation**: Executes the `make` command to ensure the source code compiles successfully into the `os` executable without errors.
+3. **Automated Testing**: Runs the scheduling simulations via the `./run.sh` script to test the system's behavior.
+4. **Validation**: Verifies the successful generation of simulation logs and results in the `output/` directory.
+
+### Build Status & Logs
+You can monitor the live status of the pipeline and inspect detailed execution logs for each build by navigating to the **[Actions](../../actions)** tab of this repository.
 
 ---
 ## 👥 Team
@@ -219,7 +255,3 @@ This source code is developed and used **for educational purposes only**, under 
 > Unauthorized redistribution or commercial use is strictly prohibited.
 
 ---
-
-
-
-
