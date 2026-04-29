@@ -29,3 +29,15 @@ jobs:
     - name: Check output
       run: |
         ls -l output/
+        
+    - name: Upload Simulation Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: simulation-results
+        path: output/
+
+    - name: Upload Executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: os-executable
+        path: os
