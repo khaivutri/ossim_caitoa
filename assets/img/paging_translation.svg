@@ -1,0 +1,133 @@
+<svg width="680" height="510" viewBox="0 0 680 510" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', 'Liberation Sans', Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="680" height="510" fill="#ffffff"/>
+
+  <!-- ═══════════════════════════ 32-BIT ═══════════════════════════ -->
+  <text x="340" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#333333">32-bit address scheme (22-bit bus, 256 B page size)</text>
+
+  <!-- bit labels -->
+  <text x="96"  y="54" text-anchor="middle" font-family="monospace" font-size="10" fill="#888">21</text>
+  <text x="244" y="54" text-anchor="middle" font-family="monospace" font-size="10" fill="#888">8   7</text>
+  <text x="390" y="54" text-anchor="middle" font-family="monospace" font-size="10" fill="#888">0</text>
+
+  <!-- Page Number field -->
+  <rect x="36" y="60" width="296" height="38" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+  <text x="184" y="84" text-anchor="middle" font-size="13" font-weight="600" fill="#26215C">PAGE NUMBER  (p)  — 14 bits</text>
+
+  <!-- Offset field -->
+  <rect x="336" y="60" width="160" height="38" rx="5" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+  <text x="416" y="84" text-anchor="middle" font-size="13" font-weight="600" fill="#04342C">OFFSET  (d)  — 8 bits</text>
+
+  <!-- 22-bit brace label -->
+  <line x1="36"  y1="102" x2="496" y2="102" stroke="#aaa" stroke-width="0.5"/>
+  <text x="266" y="115" text-anchor="middle" font-size="10" fill="#888">22 bits total</text>
+
+  <!-- arrows from fields -->
+  <path d="M184 98 L184 140 L116 140" fill="none" stroke="#534AB7" stroke-width="1" marker-end="url(#arr)"/>
+  <path d="M416 98 L416 158" fill="none" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Page Table -->
+  <rect x="28" y="140" width="172" height="62" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+  <text x="114" y="166" text-anchor="middle" font-size="12" font-weight="600" fill="#26215C">Page Table (pgd)</text>
+  <text x="114" y="184" text-anchor="middle" font-size="10" fill="#534AB7">p  →  FPN (frame #)</text>
+
+  <!-- Physical Address -->
+  <rect x="330" y="158" width="192" height="42" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+  <text x="426" y="183" text-anchor="middle" font-size="12" font-weight="600" fill="#04342C">Physical Address</text>
+
+  <!-- page table → phys addr -->
+  <path d="M200 171 L328 171" fill="none" stroke="#534AB7" stroke-width="1" marker-end="url(#arr)"/>
+  <text x="263" y="164" text-anchor="middle" font-size="10" fill="#534AB7">frame base</text>
+
+  <!-- MEMRAM -->
+  <rect x="548" y="138" width="108" height="80" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="602" y="164" text-anchor="middle" font-size="12" font-weight="600" fill="#4A1B0C">MEMRAM</text>
+  <text x="602" y="181" text-anchor="middle" font-size="10" fill="#993C1D">frames 0..N</text>
+  <text x="602" y="197" text-anchor="middle" font-size="10" fill="#993C1D">256 B each</text>
+  <path d="M522 179 L546 179" fill="none" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- MEMSWP -->
+  <rect x="548" y="236" width="108" height="56" rx="8" fill="#f1efe8" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text x="602" y="261" text-anchor="middle" font-size="12" font-weight="600" fill="#2C2C2A">MEMSWP</text>
+  <text x="602" y="278" text-anchor="middle" font-size="10" fill="#5F5E5A">up to 4 devices</text>
+  <path d="M602 218 L602 234" fill="none" stroke="#5F5E5A" stroke-width="0.8" stroke-dasharray="4 2" marker-end="url(#arr)"/>
+  <text x="636" y="228" font-size="10" fill="#5F5E5A">swap</text>
+
+  <!-- ═══════════════════════════ DIVIDER ═══════════════════════════ -->
+  <line x1="36" y1="312" x2="644" y2="312" stroke="#dddddd" stroke-width="0.8" stroke-dasharray="6 3"/>
+
+  <!-- ═══════════════════════════ 64-BIT ═══════════════════════════ -->
+  <text x="340" y="332" text-anchor="middle" font-size="13" font-weight="600" fill="#333333">64-bit address scheme — 5-level paging (up to 128 PiB virtual memory)</text>
+
+  <!-- bit range labels -->
+  <text x="56"  y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">63..57</text>
+  <text x="100" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">56..48</text>
+  <text x="186" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">47..39</text>
+  <text x="272" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">38..30</text>
+  <text x="358" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">29..21</text>
+  <text x="444" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">20..12</text>
+  <text x="532" y="354" text-anchor="start" font-family="monospace" font-size="9" fill="#888">11..0</text>
+
+  <!-- canonical -->
+  <rect x="44"  y="362" width="52" height="36" rx="4" fill="#f1efe8" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text x="70"  y="381" text-anchor="middle" font-size="10" fill="#2C2C2A">canon</text>
+  <text x="70"  y="393" text-anchor="middle" font-size="9"  fill="#5F5E5A">0 / 1</text>
+
+  <!-- PGD -->
+  <rect x="98"  y="362" width="84" height="36" rx="5" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+  <text x="140" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#501313">PGD</text>
+
+  <!-- P4D -->
+  <rect x="184" y="362" width="84" height="36" rx="5" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+  <text x="226" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#412402">P4D</text>
+
+  <!-- PUD -->
+  <rect x="270" y="362" width="84" height="36" rx="5" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1"/>
+  <text x="312" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#173404">PUD</text>
+
+  <!-- PMD -->
+  <rect x="356" y="362" width="84" height="36" rx="5" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+  <text x="398" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#04342C">PMD</text>
+
+  <!-- PT -->
+  <rect x="442" y="362" width="84" height="36" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+  <text x="484" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#26215C">PT</text>
+
+  <!-- OFFSET -->
+  <rect x="528" y="362" width="108" height="36" rx="5" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+  <text x="582" y="384" text-anchor="middle" font-size="13" font-weight="600" fill="#042C53">OFFSET</text>
+
+  <!-- 64-bit underline -->
+  <line x1="44" y1="402" x2="636" y2="402" stroke="#aaa" stroke-width="0.5"/>
+  <text x="340" y="414" text-anchor="middle" font-size="10" fill="#888">64 bits — canonical addresses only (bits 63-57 must be uniform)</text>
+
+  <!-- size annotations -->
+  <text x="140" y="428" text-anchor="middle" font-size="9" fill="#A32D2D">128 PiB</text>
+  <text x="226" y="428" text-anchor="middle" font-size="9" fill="#BA7517">256 TB</text>
+  <text x="312" y="428" text-anchor="middle" font-size="9" fill="#3B6D11">512 GB</text>
+  <text x="398" y="428" text-anchor="middle" font-size="9" fill="#1D9E75">1 GB</text>
+  <text x="484" y="428" text-anchor="middle" font-size="9" fill="#534AB7">2 MB</text>
+  <text x="582" y="428" text-anchor="middle" font-size="9" fill="#185FA5">4 KB page</text>
+
+  <!-- tick marks -->
+  <line x1="140" y1="398" x2="140" y2="424" stroke="#A32D2D" stroke-width="0.5"/>
+  <line x1="226" y1="398" x2="226" y2="424" stroke="#BA7517" stroke-width="0.5"/>
+  <line x1="312" y1="398" x2="312" y2="424" stroke="#3B6D11" stroke-width="0.5"/>
+  <line x1="398" y1="398" x2="398" y2="424" stroke="#1D9E75" stroke-width="0.5"/>
+  <line x1="484" y1="398" x2="484" y2="424" stroke="#534AB7" stroke-width="0.5"/>
+  <line x1="582" y1="398" x2="582" y2="424" stroke="#185FA5" stroke-width="0.5"/>
+
+  <!-- User / Kernel space badges -->
+  <rect x="44"  y="444" width="240" height="24" rx="4" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="164" y="460" text-anchor="middle" font-size="10" fill="#04342C">User space: bits 63-57 = 0  (addresses &lt; 2^57)</text>
+
+  <rect x="296" y="444" width="340" height="24" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="466" y="460" text-anchor="middle" font-size="10" fill="#501313">Kernel space: bits 63-57 = 1  (direct-mapped, shared across all processes)</text>
+
+  <!-- Walk description -->
+  <text x="340" y="494" text-anchor="middle" font-size="10" fill="#888">Walk: VA → PGD[i] → P4D[j] → PUD[k] → PMD[l] → PT[m] → frame base + offset = PA</text>
+</svg>
