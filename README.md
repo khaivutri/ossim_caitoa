@@ -55,27 +55,9 @@ The system is designed to run on **virtual hardware** supporting multiple CPUs a
 
 The OS manages two virtual resources — CPU(s) and RAM — through a **Scheduler/Dispatcher** and a **Virtual Memory Engine**. A hardware-supported mode bit enforces strict separation between user-mode and kernel-mode execution, preventing unauthorized access to privileged resources.
 
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   User Applications                  │
-├─────────────────────────────────────────────────────┤
-│              System Call Interface (syscall.c)        │
-│         [ ALLOC │ FREE │ READ │ WRITE ]              │
-├───────────────────────┬─────────────────────────────┤
-│   Process Scheduler   │   Memory Management Unit     │
-│      (sched.c)        │    (mm64.c / paging.c)         │
-│                       │                              │
-│  ┌─── Priority 0 ──┐  │  ┌── Virtual Address Space ┐ │
-│  ├─── Priority 1 ──┤  │  │  PGD→P4D→PUD→PMD→PT    │ │
-│  ├─── Priority 2 ──┤  │  ├────────────────────────┤ │
-│  └─── Priority N ──┘  │  │   RAM  ⇄  SWAP Space   │ │
-│                       │  └────────────────────────┘ │
-├───────────────────────┴─────────────────────────────┤
-│                Virtual Hardware Layer                 │
-│            [ Multi-CPU │ Mode Bit Control ]           │
-└─────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="assets/img/overview.jpg" alt="overview" width="700"/>
+</p>
 
 ---
 
@@ -137,6 +119,11 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 
 > ⚠️ All transitions from User Mode → Kernel Mode are gated through the system call interface, preventing unauthorized access to privileged resources.
 
+
+<p align="center">
+  <img src="assets/img/system_call.png" alt="Scheduler" width="700"/>
+</p>
+
 ---
 
 ## 📂 Project Structure
@@ -149,6 +136,7 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 │   ├── sched.h            # MLQ scheduler definitions
 │   ├── syscall.h          # System call interface definitions
 │   └── os-cfg.h           # Global OS configuration and constants
+|   └──....
 ├── src/                   # Core Implementation (Kernel & Modules)
 │   ├── os.c               # Simulation entry point and main loop
 │   ├── cpu.c              # Instruction execution and CPU simulation
@@ -159,6 +147,7 @@ Provides a **unified, hardware-assisted** interface for user-space applications 
 │   ├── paging.c           # Page table and swap implementation
 │   ├── syscall.c          # System call dispatcher and handling
 │   └── loader.c           # Process and hardware configuration loader
+|   └──....
 ├── input/                 # Simulation Inputs
 │   ├── proc/              # Simulated process description files (.proc)
 │   └── os_*/              # Hardware and OS configuration files
