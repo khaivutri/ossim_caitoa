@@ -64,7 +64,7 @@ The OS manages two virtual resources — CPU(s) and RAM — through a **Schedule
 │         [ ALLOC │ FREE │ READ │ WRITE ]              │
 ├───────────────────────┬─────────────────────────────┤
 │   Process Scheduler   │   Memory Management Unit     │
-│      (sched.c)        │    (mm.c / paging.c)         │
+│      (sched.c)        │    (mm64.c / paging.c)         │
 │                       │                              │
 │  ┌─── Priority 0 ──┐  │  ┌── Virtual Address Space ┐ │
 │  ├─── Priority 1 ──┤  │  │  PGD→P4D→PUD→PMD→PT    │ │
