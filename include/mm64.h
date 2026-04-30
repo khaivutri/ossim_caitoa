@@ -59,6 +59,7 @@
 #define PAGING64_ADDR_P4D_MASK GENMASK64(PAGING64_ADDR_P4D_HIBIT, PAGING64_ADDR_P4D_LOBIT)
 #define PAGING64_ADDR_PGD_MASK GENMASK64(PAGING64_ADDR_PGD_HIBIT, PAGING64_ADDR_PGD_LOBIT)
 
+#ifdef MM64
 uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc);
-
+#endif
 #endif
