@@ -200,7 +200,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   cur_vma->vm_end = new_end;
   cur_vma->sbrk += inc_sz;
 
-  if (vm_map_ram(caller, old_end, new_end, old_end, incnumpage, newrg) < 0) {
+  if (vm_map_range(caller, old_end, new_end, old_end, incnumpage, newrg) < 0) {
       /* BẮT LỖI TỐI QUAN TRỌNG (ROLLBACK): 
         * Nếu hết RAM vật lý, vm_map_ram sẽ thất bại. 
         * Ta phải rút lại sổ đỏ, hoàn trả lại ranh giới cũ để không làm hỏng tiến trình!
