@@ -40,6 +40,8 @@ struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
       return NULL;
 
     pvma = pvma->vm_next;
+    if (pvma == NULL) // Kiểm tra ngay sau khi chuyển
+      return NULL;
     vmait = pvma->vm_id;
   }
 
