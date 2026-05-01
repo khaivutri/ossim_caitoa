@@ -102,7 +102,7 @@ A comprehensive **paging-based** memory system providing full isolation of proce
 The diagram below shows how a virtual address is decomposed and walked through each level of the page-table hierarchy to resolve a physical frame:
 
 <p align="center">
-  <img src="assets/img/paging_translation.svg" alt="Paging Address Translation — 32-bit and 64-bit schemes" width="700"/>
+  <img src="assets/img/5_level_paging.png" alt="Paging Address Translation — 32-bit and 64-bit schemes" width="700"/>
 </p>
 
 ---
