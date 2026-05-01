@@ -67,18 +67,18 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid) {
  *
  */
 int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *alloc_addr) {
-    if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ || caller == NULL || caller->krnl == NULL) {
+    if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ || caller == NULL || caller->mm == NULL) {
         return -1;
     }
     /*Allocate at the toproof */
     pthread_mutex_lock(&mmvm_lock);
     struct vm_rg_struct rgnode;
-    struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+    struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
     // int inc_sz = 0;
 
     if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0) {
-        caller->krnl->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
-        caller->krnl->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+        caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+        caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
 
         *alloc_addr = rgnode.rg_start;
 
@@ -105,8 +105,8 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
     _syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
 
     /* Cập nhật thông tin vùng nhớ cho biến đang xin cấp phát */
-    caller->krnl->mm->symrgtbl[rgid].rg_start = old_sbrk;
-    caller->krnl->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
+    caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
+    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
     *alloc_addr = old_sbrk;
 
     /* XỬ LÝ PHẦN DƯ: Đưa phần không gian thừa vào danh sách free list */
@@ -116,7 +116,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
         remain_rg->rg_end = old_sbrk + aligned_size; // Kéo dài đến hết trang vừa xin
         remain_rg->rg_next = NULL;
 
-        enlist_vm_freerg_list(caller->krnl->mm, remain_rg); // Quăng vào rổ free
+        enlist_vm_freerg_list(caller->mm, remain_rg); // Quăng vào rổ free
     }
 
     pthread_mutex_unlock(&mmvm_lock);
@@ -136,7 +136,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid) {
     }
     pthread_mutex_lock(&mmvm_lock);
     /* TO-DO: Manage the collect freed region to freerg_list */
-    struct vm_rg_struct *rgnode = get_symrg_byid(caller->krnl->mm, rgid);
+    struct vm_rg_struct *rgnode = get_symrg_byid(caller->mm, rgid);
     if (rgnode == NULL) {
         pthread_mutex_unlock(&mmvm_lock);
         return -1;
@@ -158,7 +158,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid) {
     rgnode->rg_next = NULL;
 
     /*enlist the obsoleted memory region */
-    enlist_vm_freerg_list(caller->krnl->mm, freerg_node);
+    enlist_vm_freerg_list(caller->mm, freerg_node);
 
     pthread_mutex_unlock(&mmvm_lock);
     return 0;
@@ -240,7 +240,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller) {
         // Kiểm tra ram đã đầy hay chưa
         if (MEMPHY_get_freefp(caller->krnl->mram, &tgtfpn) == -1) {
             /* Find victim page */
-            if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
+            if (find_victim_page(caller->mm, &vicpgn) == -1) {
                 return -1;
             }
             /* Lấy số hiệu khung RAM (FPN) mà nạn nhân đang chiếm giữ */
@@ -276,7 +276,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller) {
         }
         /* Update its online status of the target page */
         pte_set_fpn(caller, pgn, tgtfpn);
-        enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
+        enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
     }
 
     *fpn = PAGING_FPN(pte_get_entry(caller, pgn));
@@ -381,7 +381,7 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data)
         return -1;
     }
 
-    struct vm_rg_struct *currg = get_symrg_byid(caller->krnl->mm, rgid);
+    struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
     /* TO-DO Invalid memory identify */
 
     if (currg == NULL) {
@@ -394,7 +394,7 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data)
         return -1; // Lỗi: Truy cập vượt quá giới hạn mảng (Out-of-bounds / Segmentation Fault)
     }
 
-    int ret = pg_getval(caller->krnl->mm, currg->rg_start + offset, data, caller);
+    int ret = pg_getval(caller->mm, currg->rg_start + offset, data, caller);
 
     return ret;
 }
@@ -435,7 +435,7 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE value
         return -1;
     }
     pthread_mutex_lock(&mmvm_lock);
-    struct vm_rg_struct *currg = get_symrg_byid(caller->krnl->mm, rgid);
+    struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
     /*Invalid memory identify */
     if (currg == NULL) {
         pthread_mutex_unlock(&mmvm_lock);
@@ -452,7 +452,7 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE value
         return -1; // Lỗi: Tràn bộ đệm (Buffer Overflow / Out-of-bounds write)
     }
 
-    int ret = pg_setval(caller->krnl->mm, currg->rg_start + offset, value, caller);
+    int ret = pg_setval(caller->mm, currg->rg_start + offset, value, caller);
 
     /* Mở khóa trước khi thoát */
     pthread_mutex_unlock(&mmvm_lock);
@@ -894,13 +894,13 @@ int __write_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset,
 int __read_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data) {
     /* TO-DO: provide OS level management user memory access */
     /* 1. Validation cơ bản */
-    if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL) {
+    if (caller == NULL || caller->krnl == NULL || caller->mm == NULL) {
         return -1;
     }
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     struct vm_rg_struct *currg = get_symrg_byid(mm, rgid);
     /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
     if (currg == NULL) {
@@ -956,13 +956,13 @@ int __write_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, B
     /* TO-DO: provide OS level management user memory access */
     /* TO-DO: provide OS level management user memory access */
     /* 1. Validation cơ bản */
-    if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL) {
+    if (caller == NULL || caller->krnl == NULL || caller->mm == NULL) {
         return -1;
     }
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     struct vm_rg_struct *currg = get_symrg_byid(mm, rgid);
     /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
     if (currg == NULL) {
@@ -1016,7 +1016,7 @@ int free_pcb_memph(struct pcb_t *caller) {
     uint32_t pte;
 
     for (pagenum = 0; pagenum < PAGING_MAX_PGN; pagenum++) {
-        pte = caller->krnl->mm->pgd[pagenum];
+        pte = caller->mm->pgd[pagenum];
 
         if (PAGING_PAGE_PRESENT(pte)) {
             fpn = PAGING_FPN(pte);
@@ -1070,7 +1070,7 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn) {
  *
  */
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg) {
-    struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+    struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
     struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
 

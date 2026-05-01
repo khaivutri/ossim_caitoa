@@ -27,6 +27,7 @@
  */
 struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
 {
+  if (mm == NULL) return NULL;
   struct vm_area_struct *pvma = mm->mmap;
 
   if (mm->mmap == NULL)
@@ -66,14 +67,14 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, ad
 {
   struct vm_rg_struct * newrg;
   /* 1. Validation an toàn để chống Crash */
-  if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL) {
+  if (caller == NULL || caller->krnl == NULL || caller->mm == NULL) {
       return NULL;
   }
   /* TO-DO retrive current vma to obtain newrg, current comment out due to compiler redundant warning*/
 
   /* TO-DO: update the newrg boundary
   */
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (cur_vma == NULL) return NULL;
   newrg = malloc(sizeof(struct vm_rg_struct));
   if (newrg == NULL) {
@@ -98,7 +99,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, ad
 int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, addr_t vmaend)
 {
   /* 1. Validation an toàn */
-  if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL)
+  if (caller == NULL || caller->krnl == NULL || caller->mm == NULL)
   {
     return -1;
   }
@@ -109,7 +110,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
     return -1;
   }
 
-  struct vm_area_struct *vma = caller->krnl->mm->mmap;
+  struct vm_area_struct *vma = caller->mm->mmap;
   if (vma == NULL)
   {
     return -1;
@@ -149,13 +150,13 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
  */
 int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
 {
-  if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL) {
+  if (caller == NULL || caller->krnl == NULL || caller->mm == NULL) {
       return -1; 
   }
   if (inc_sz == 0) {
       return 0; // Không cần làm gì cả, coi như thành công
   }
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (cur_vma == NULL) {
       return -1; // Lỗi: Vùng nhớ yêu cầu nới rộng không tồn tại
   }

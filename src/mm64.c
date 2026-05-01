@@ -34,10 +34,10 @@
 #ifdef MM64
 // Hàm Helper: Trả về địa chỉ con trỏ của PTE thật sự trong cây 5 cấp
 uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
-    if (caller == NULL || caller->krnl == NULL)
+    if (caller == NULL || caller->mm == NULL)
         return NULL;
 
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if (mm == NULL)
         return NULL; // Guard chống lỗi
 
@@ -273,7 +273,7 @@ uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn) {
 #else
     // Nhánh 32-bit (Paging 1 cấp/phẳng):
     // Bắt buộc phải móc mm từ Danh bạ Kernel ra, KHÔNG DÙNG krnl->mm
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if (mm != NULL) {
         pte = mm->pgd[pgn];
     }
@@ -358,7 +358,7 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
                        struct vm_rg_struct *ret_rg)    // return mapped region, the real mapped fp
 {                                                      // no guarantee all given pages are mapped
                                                        // struct framephy_struct *fpit;
-    if (caller == NULL || caller->krnl == NULL) {
+    if (caller == NULL || caller->mm == NULL) {
         return -1;
     }
     //  Khởi tạo biến chạy để duyệt danh sách frame
@@ -392,7 +392,7 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
             break;
         }
         // C. Đưa vào hàng đợi FIFO (Để sau này OS biết trang nào vào trước để ưu tiên đuổi ra khi RAM đầy)
-        struct mm_struct *mm = caller->krnl->mm;
+        struct mm_struct *mm = caller->mm;
         if (mm != NULL) {
             enlist_pgn_node(&mm->fifo_pgn, pgn);
         }
@@ -717,11 +717,11 @@ int print_list_pgn(struct pgn_t *ip) {
 }
 
 int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end) {
-    if (caller == NULL || caller->krnl == NULL)
+    if (caller == NULL || caller->mm == NULL)
         return -1;
 
     // Lấy mm qua hàm tra cứu
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if (mm == NULL || mm->pgd == NULL)
         return -1;
 
