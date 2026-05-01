@@ -178,8 +178,7 @@ int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index) {
     proc->regs[reg_index] = addr;
 #ifdef IODUMP
     /* TO-DO dump IO content (if needed) */
-    printf("ALLOC: Process PID[%d] allocated %lu bytes -> Virtual Address: 0x%lx (Region ID: %u)\n", proc->pid,
-           (unsigned long)size, (unsigned long)addr, reg_index);
+    printf("%s:%d\n", __func__, __LINE__);
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL
 #endif
@@ -200,13 +199,10 @@ int libfree(struct pcb_t *proc, uint32_t reg_index) {
     if (val == -1) {
         return -1;
     }
-    printf("%s:%d\n", __func__, __LINE__);
-    addr_t freed_addr = proc->regs[reg_index]; // Lưu tạm để in log
     proc->regs[reg_index] = 0;                 // Xóa địa chỉ trong thanh ghi
 #ifdef IODUMP
     /* TO-DO dump IO content (if needed) */
-    printf("FREE: Process PID[%d] freed region at Virtual Address: 0x%lx (Region ID: %u)\n", proc->pid,
-           (unsigned long)freed_addr, reg_index);
+    printf("%s:%d\n", __func__, __LINE__);
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL
 #endif
@@ -405,14 +401,13 @@ int libread(struct pcb_t *proc, // Process executing the instruction
             addr_t offset,      // Source address = [source] + [offset]
             uint32_t *destination) {
     BYTE data;
-    printf("%s:%d\n", __func__, __LINE__);
     int val = __read(proc, 0, source, offset, &data);
 
     *destination = data;
 #ifdef IODUMP
     /* TO-DO dump IO content (if needed) */
     if (val == 0) {
-        printf("read region=%d offset=%ld value=%d\n", source, offset, data);
+        printf("%s:%d\n", __func__, __LINE__);
     }
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL
@@ -472,7 +467,7 @@ int libwrite(struct pcb_t *proc,   // Process executing the instruction
     }
 #ifdef IODUMP
     /* TO-DO dump IO content (if needed) */
-    printf("write region=%d offset=%ld value=%d\n", destination, offset, data);
+    printf("%s:%d\n", __func__, __LINE__);
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL
 #endif
