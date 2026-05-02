@@ -199,7 +199,7 @@ int libfree(struct pcb_t *proc, uint32_t reg_index) {
     if (val == -1) {
         return -1;
     }
-    proc->regs[reg_index] = 0;                 // Xóa địa chỉ trong thanh ghi
+    proc->regs[reg_index] = 0; // Xóa địa chỉ trong thanh ghi
 #ifdef IODUMP
     /* TO-DO dump IO content (if needed) */
     printf("%s:%d\n", __func__, __LINE__);
@@ -762,8 +762,13 @@ int __read_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, 
     }
 
     struct mm_struct *mm = caller->krnl->mm;
+    if (mm == NULL) {
+        return -1;
+    }
     struct vm_rg_struct *currg = &mm->symrgtbl[rgid];
-
+    if (currg == NULL) {
+        return -1;
+    }
     /* 2. Kiểm tra tính hợp lệ của vùng nhớ và offset */
     if (currg->rg_start == 0 && currg->rg_end == 0) {
         return -1; // Lỗi: Vùng nhớ chưa được cấp phát hoặc đã bị Free
@@ -829,8 +834,13 @@ int __write_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset,
     }
 
     struct mm_struct *mm = caller->krnl->mm;
+    if (mm == NULL) {
+        return -1;
+    }
     struct vm_rg_struct *currg = &mm->symrgtbl[rgid];
-
+    if (currg == NULL) {
+        return -1;
+    }
     /* 2. Kiểm tra tính hợp lệ của vùng nhớ và offset */
     if (currg->rg_start == 0 && currg->rg_end == 0) {
         return -1; // Lỗi: Ghi vào vùng nhớ rỗng (chưa khởi tạo hoặc đã bị Free)
@@ -895,12 +905,15 @@ int __read_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BY
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->mm;
-    struct vm_rg_struct *currg = get_symrg_byid(mm, rgid);
-    /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
-    if (currg == NULL) {
+    struct mm_struct *mm = caller->krnl->mm;
+    if(mm == NULL){
         return -1;
     }
+    struct vm_rg_struct *currg = &mm->symrgtbl[rgid];
+    if(currg == NULL){
+        return -1;
+    }
+    /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
     if (currg->rg_start == 0 && currg->rg_end == 0) {
         return -1;
     }
@@ -957,12 +970,15 @@ int __write_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, B
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->mm;
-    struct vm_rg_struct *currg = get_symrg_byid(mm, rgid);
-    /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
-    if (currg == NULL) {
+    struct mm_struct *mm = caller->krnl->mm;
+    if(mm == NULL){
         return -1;
     }
+    struct vm_rg_struct *currg = &mm->symrgtbl[rgid];
+    if(currg == NULL){
+        return -1;
+    }
+    /* 2. Kiểm tra tính hợp lệ của vùng nhớ */
     if (currg->rg_start == 0 && currg->rg_end == 0) {
         return -1;
     }
