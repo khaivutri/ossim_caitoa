@@ -5,7 +5,7 @@
 ./os os_1_singleCPU_mlq > input/os_1_singleCPU_mlq.output
 ./os os_1_singleCPU_mlq_paging > input/os_1_singleCPU_mlq_paging.output
 ./os sched > input/sched.output
-./os sched_0 input/sched_0.output
+./os sched_0 > input/sched_0.output
 ./os sched_1 > input/sched_1.output
 ./os os_sc > input/os_sc.output
 ./os os_syscall > input/os_syscall.output
