@@ -33,11 +33,11 @@
 // }
 #ifdef MM64
 // Hàm Helper: Trả về địa chỉ con trỏ của PTE thật sự trong cây 5 cấp
-static uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
-    if (caller == NULL || caller->krnl == NULL)
+uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
+    if (caller == NULL || caller->mm == NULL)
         return NULL;
 
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if (mm == NULL)
         return NULL; // Guard chống lỗi
 
@@ -273,7 +273,7 @@ uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn) {
 #else
     // Nhánh 32-bit (Paging 1 cấp/phẳng):
     // Bắt buộc phải móc mm từ Danh bạ Kernel ra, KHÔNG DÙNG krnl->mm
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if (mm != NULL) {
         pte = mm->pgd[pgn];
     }
@@ -358,7 +358,7 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
                        struct vm_rg_struct *ret_rg)    // return mapped region, the real mapped fp
 {                                                      // no guarantee all given pages are mapped
                                                        // struct framephy_struct *fpit;
-    if (caller == NULL || caller->krnl == NULL) {
+    if (caller == NULL || caller->mm == NULL) {
         return -1;
     }
     //  Khởi tạo biến chạy để duyệt danh sách frame
@@ -392,7 +392,7 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
             break;
         }
         // C. Đưa vào hàng đợi FIFO (Để sau này OS biết trang nào vào trước để ưu tiên đuổi ra khi RAM đầy)
-        struct mm_struct *mm = caller->krnl->mm;
+        struct mm_struct *mm = caller->mm;
         if (mm != NULL) {
             enlist_pgn_node(&mm->fifo_pgn, pgn);
         }
@@ -717,120 +717,20 @@ int print_list_pgn(struct pgn_t *ip) {
 }
 
 int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end) {
-    if (caller == NULL || caller->krnl == NULL)
+    if (caller == NULL || caller->mm == NULL)
         return -1;
 
-    // Lấy mm qua hàm tra cứu
-    struct mm_struct *mm = caller->krnl->mm;
-    if (mm == NULL || mm->pgd == NULL)
-        return -1;
+    printf("print_pgtbl:\n");
 
-    if (mm->pgd == NULL) {
-        printf("print_pgtbl: Root page table is not initialized!\n");
-        return -1;
-    }
+    // Lôi các con trỏ bảng phân trang thật sự từ bên trong mảng pgd
+    uint64_t *pgd_tbl = (uint64_t *)caller->mm->pgd;
+    uint64_t *p4d_tbl = pgd_tbl ? (uint64_t *)pgd_tbl[0] : NULL;
+    uint64_t *pud_tbl = p4d_tbl ? (uint64_t *)p4d_tbl[0] : NULL;
+    uint64_t *pmd_tbl = pud_tbl ? (uint64_t *)pud_tbl[0] : NULL;
 
-    printf("==== PAGE TABLE DUMP ====\n");
+    // In ra 1 dòng chuẩn xác
+    printf(" PDG=%p P4g=%p PUD=%p PMD=%p\n", (void *)pgd_tbl, (void *)p4d_tbl, (void *)pud_tbl, (void *)pmd_tbl);
 
-#ifdef MM64
-    if (end == (addr_t)-1) {
-        printf("Mode: Full Tree Traversal\n");
-        // Duyệt trực tiếp cây 5 cấp, bỏ qua hoàn toàn các nhánh NULL
-        for (addr_t pgd = 0; pgd < PAGING64_DIR_ENTRIES; pgd++) {
-            if (mm->pgd[pgd] == 0)
-                continue;
-            uint64_t *p4d_tbl = (uint64_t *)mm->pgd[pgd];
-
-            for (addr_t p4d = 0; p4d < PAGING64_DIR_ENTRIES; p4d++) {
-                if (p4d_tbl[p4d] == 0)
-                    continue;
-                uint64_t *pud_tbl = (uint64_t *)p4d_tbl[p4d];
-
-                for (addr_t pud = 0; pud < PAGING64_DIR_ENTRIES; pud++) {
-                    if (pud_tbl[pud] == 0)
-                        continue;
-                    uint64_t *pmd_tbl = (uint64_t *)pud_tbl[pud];
-
-                    for (addr_t pmd = 0; pmd < PAGING64_DIR_ENTRIES; pmd++) {
-                        if (pmd_tbl[pmd] == 0)
-                            continue;
-                        uint64_t *pt_tbl = (uint64_t *)pmd_tbl[pmd];
-
-                        for (addr_t pt = 0; pt < PAGING64_DIR_ENTRIES; pt++) {
-                            uint64_t pte = pt_tbl[pt];
-                            if (pte != 0) {
-                                // Tái tạo PGN từ 5 chỉ số (Mỗi index 9 bit)
-                                addr_t pgn = (pgd << 36) | (p4d << 27) | (pud << 18) | (pmd << 9) | pt;
-
-                                // Giải mã PTE
-                                int pre = (pte & PAGING_PTE_PRESENT_MASK) ? 1 : 0;
-                                int swp = (pte & PAGING_PTE_SWAPPED_MASK) ? 1 : 0;
-                                int drt = (pte & PAGING_PTE_DIRTY_MASK) ? 1 : 0;
-
-                                if (pre) {
-                                    addr_t fpn = GETVAL(pte, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
-                                    printf("va[%016lx] -> pte[0x%016lx] (P:%d S:%d D:%d FPN:%lu)\n", (unsigned long)pgn,
-                                           (unsigned long)pte, pre, swp, drt, (unsigned long)fpn);
-                                } else if (swp) {
-                                    addr_t swpoff = GETVAL(pte, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
-                                    printf("va[%016lx] -> pte[0x%016lx] (P:%d S:%d D:%d SWPOFF:%lu)\n",
-                                           (unsigned long)pgn, (unsigned long)pte, pre, swp, drt,
-                                           (unsigned long)swpoff);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        printf("Mode: Linear Range Scan (%08lx - %08lx)\n", (unsigned long)start, (unsigned long)end);
-        // Quét tuyến tính khi có end xác định
-        for (addr_t addr = start; addr < end; addr += PAGING64_PAGESZ) {
-            addr_t pgd = 0, p4d = 0, pud = 0, pmd = 0, pt = 0;
-            get_pd_from_address(addr, &pgd, &p4d, &pud, &pmd, &pt);
-
-            if (mm->pgd[pgd] == 0)
-                continue;
-            uint64_t *p4d_tbl = (uint64_t *)mm->pgd[pgd];
-
-            if (p4d_tbl[p4d] == 0)
-                continue;
-            uint64_t *pud_tbl = (uint64_t *)p4d_tbl[p4d];
-
-            if (pud_tbl[pud] == 0)
-                continue;
-            uint64_t *pmd_tbl = (uint64_t *)pud_tbl[pud];
-
-            if (pmd_tbl[pmd] == 0)
-                continue;
-            uint64_t *pt_tbl = (uint64_t *)pmd_tbl[pmd];
-
-            uint64_t pte = pt_tbl[pt];
-            if (pte != 0) {
-                addr_t pgn = addr >> PAGING64_ADDR_PT_SHIFT;
-                int pre = (pte & PAGING_PTE_PRESENT_MASK) ? 1 : 0;
-                int swp = (pte & PAGING_PTE_SWAPPED_MASK) ? 1 : 0;
-                int drt = (pte & PAGING_PTE_DIRTY_MASK) ? 1 : 0;
-
-                printf("va[%016lx] -> pte[0x%016lx] (P:%d S:%d D:%d)\n", (unsigned long)pgn, (unsigned long)pte, pre,
-                       swp, drt);
-            }
-        }
-    }
-#else
-    // Dành cho hệ thống 32-bit (Thường là cấu trúc phẳng hoặc 2 cấp)
-    for (addr = start; addr < end; addr += PAGING_PAGESZ) {
-        addr_t pgn = PAGING_PGN(addr);
-
-        // Giả sử Paging 32-bit là mảng phẳng 1 cấp
-        if (mm->pgd[pgn] != 0) {
-            printf("va[" FORMAT_ADDR "] -> pte[" FORMATX_ADDR "]\n", (unsigned int)pgn, (unsigned int)mm->pgd[pgn]);
-        }
-    }
-#endif
-
-    printf("=========================================\n");
     return 0;
 }
 
