@@ -191,27 +191,26 @@ static void read_config(const char *path) {
     ld_processes.start_time = (unsigned long *)malloc(sizeof(unsigned long) * num_processes);
 #ifdef MM_PAGING
     int sit;
-// #ifdef MM_FIXED_MEMSZ
-//     /* We provide here a back compatible with legacy OS simulatiom config file
-//      * In which, it have no addition config line for Mema, keep only one line
-//      * for legacy info
-//      *  [time slice] [N = Number of CPU] [M = Number of Processes to be run]
-//      */
-//     memramsz = 0x100000000;
-//     memswpsz[0] = 0x1000000;
-//     for (sit = 1; sit < PAGING_MAX_MMSWP; sit++)
-//         memswpsz[sit] = 0;
-// #else
-    /* Read input config of memory size: MEMRAM and upto 4 MEMSWP (mem swap)
-     * Format: (size=0 result non-used memswap, must have RAM and at least 1 SWAP)
-     *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
-     */
-    fscanf(file, FORMAT_ARG "\n", &memramsz);
-    for (sit = 0; sit < PAGING_MAX_MMSWP; sit++)
-        fscanf(file, FORMAT_ARG, &(memswpsz[sit]));
-
-    fscanf(file, "\n"); /* Final character */
-// #endif
+    /* Auto-detect: Try reading the next line to see if it's memory configuration or a process */
+    long pos = ftell(file); // Save the current position of the file pointer
+    char buf[512];
+    if (fgets(buf, sizeof(buf), file)) {
+        unsigned long v[5];
+        // Try to read 5 integers (RAM + 4 SWAP)
+        if (sscanf(buf, "%lu %lu %lu %lu %lu", &v[0], &v[1], &v[2], &v[3], &v[4]) == 5) {
+            /* THIS IS A PAGING FILE (Contains memory configuration) */
+            memramsz = v[0];
+            for (sit = 0; sit < PAGING_MAX_MMSWP; sit++)
+                memswpsz[sit] = v[sit+1];
+        } else {
+            /* THIS IS A LEGACY FILE (No memory configuration) */
+            fseek(file, pos, SEEK_SET); // Rewind to the previous position to read the process later
+            memramsz = 0x1000000; // Set default to 16MB (to prevent 4GB causing Segfault)
+            memswpsz[0] = 0x1000000;
+            for (sit = 1; sit < PAGING_MAX_MMSWP; sit++)
+                memswpsz[sit] = 0;
+        }
+    }
 #endif
 
 #ifdef MLQ_SCHED
