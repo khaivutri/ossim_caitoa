@@ -77,10 +77,10 @@ int MEMPHY_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
 
    
 
-   if (mp->rdmflg)
+   if (mp->rdmflg){
       pthread_mutex_lock(&memphy_lock);
       *value = mp->storage[addr];
-      pthread_mutex_unlock(&memphy_lock);
+      pthread_mutex_unlock(&memphy_lock);}
    else /* Sequential access device */
       return MEMPHY_seq_read(mp, addr, value);
 
@@ -121,10 +121,10 @@ int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
    if (mp == NULL)
       return -1;
 
-   if (mp->rdmflg)
+   if (mp->rdmflg){
       pthread_mutex_lock(&memphy_lock);
       mp->storage[addr] = data;
-      pthread_mutex_unlock(&memphy_lock);
+      pthread_mutex_unlock(&memphy_lock);}
    else /* Sequential access device */
       return MEMPHY_seq_write(mp, addr, data);
 
@@ -169,11 +169,11 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 
 int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 {
-   pthread_mutex_lock(&memphy_lock);
-
    /* 1. Validate and check availability */
    if (mp == NULL || mp->free_fp_list == NULL)
       return -1; /* Out of memory */
+
+   pthread_mutex_lock(&memphy_lock);
  
    /* 2. Pop the head of free_fp_list */
    struct framephy_struct *fp = mp->free_fp_list;
@@ -242,9 +242,10 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
 {
-   pthread_mutex_lock(&memphy_lock);
    if (mp == NULL)
       return -1;
+
+   pthread_mutex_lock(&memphy_lock);
  
    struct framephy_struct *curr = mp->used_fp_list;
    struct framephy_struct *prev = NULL;
@@ -257,8 +258,9 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
    }
  
    /* Frame not found in used list */
-   if (curr == NULL)
-      return -1;
+   if (curr == NULL){
+      pthread_mutex_unlock(&memphy_lock);
+      return -1;}
  
    /* 2. Unlink from used_fp_list */
    if (prev == NULL)
