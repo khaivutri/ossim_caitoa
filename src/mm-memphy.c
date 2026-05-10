@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+
+pthread_mutex_t memphy_lock;
 
 /*
  *  MEMPHY_mv_csr - move MEMPHY cursor
@@ -52,9 +55,11 @@ int MEMPHY_seq_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
 
    if (!mp->rdmflg)
       return -1; /* Not compatible mode for sequential read */
-
+   
+   pthread_mutex_lock(&memphy_lock);
    MEMPHY_mv_csr(mp, addr);
    *value = (BYTE)mp->storage[addr];
+   pthread_mutex_unlock(&memphy_lock);
 
    return 0;
 }
@@ -70,8 +75,12 @@ int MEMPHY_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
    if (mp == NULL)
       return -1;
 
+   
+
    if (mp->rdmflg)
+      pthread_mutex_lock(&memphy_lock);
       *value = mp->storage[addr];
+      pthread_mutex_unlock(&memphy_lock);
    else /* Sequential access device */
       return MEMPHY_seq_read(mp, addr, value);
 
@@ -93,8 +102,10 @@ int MEMPHY_seq_write(struct memphy_struct *mp, addr_t addr, BYTE value)
    if (!mp->rdmflg)
       return -1; /* Not compatible mode for sequential read */
 
+   pthread_mutex_lock(&memphy_lock);
    MEMPHY_mv_csr(mp, addr);
    mp->storage[addr] = value;
+   pthread_mutex_unlock(&memphy_lock);
 
    return 0;
 }
@@ -111,7 +122,9 @@ int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
       return -1;
 
    if (mp->rdmflg)
+      pthread_mutex_lock(&memphy_lock);
       mp->storage[addr] = data;
+      pthread_mutex_unlock(&memphy_lock);
    else /* Sequential access device */
       return MEMPHY_seq_write(mp, addr, data);
 
@@ -156,6 +169,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 
 int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 {
+   pthread_mutex_lock(&memphy_lock);
+
    /* 1. Validate and check availability */
    if (mp == NULL || mp->free_fp_list == NULL)
       return -1; /* Out of memory */
@@ -170,7 +185,9 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
    /* 4. Push onto used_fp_list (prepend — O(1)) */
    fp->fp_next = mp->used_fp_list;
    mp->used_fp_list = fp;
- 
+
+   pthread_mutex_unlock(&memphy_lock);
+
    return 0;
 }
 
@@ -225,6 +242,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
 {
+   pthread_mutex_lock(&memphy_lock);
    if (mp == NULL)
       return -1;
  
@@ -251,7 +269,9 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
    /* 3. Prepend to free_fp_list (O(1)) */
    curr->fp_next = mp->free_fp_list;
    mp->free_fp_list = curr;
- 
+
+   pthread_mutex_unlock(&memphy_lock);
+   
    return 0;
 }
 
@@ -270,6 +290,8 @@ int init_memphy(struct memphy_struct *mp, addr_t max_size, int randomflg)
 
    if (!mp->rdmflg) /* Not Ramdom acess device, then it serial device*/
       mp->cursor = 0;
+
+   pthread_mutex_init(&memphy_lock, NULL);
 
    return 0;
 }

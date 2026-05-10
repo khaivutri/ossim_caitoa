@@ -17,6 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <pthread.h>
+
+pthread_mutex_t mm64_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // /* Tra cứu Memory Context thông qua Kernel Registry (Danh bạ) */
 // struct mm_struct *get_mm_of_proc(struct krnl_t *krnl, uint32_t pid) {
@@ -109,6 +112,8 @@ int init_pte(addr_t *pte,
              int swptyp,    // swap type
              addr_t swpoff) // swap offset
 {
+    pthread_mutex_lock(&mm64_lock);
+
     if (pre != 0) {
         if (swp == 0) { // Non swap ~ page online
 
@@ -139,6 +144,8 @@ int init_pte(addr_t *pte,
             }
         }
     }
+
+    pthread_mutex_unlock(&mm64_lock);
 
     return 0;
 }
@@ -292,16 +299,21 @@ int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
         printf("pte_set_entry: Invalid caller/mm pointer!\n");
         return -1;
     }
+
+    pthread_mutex_lock(&mm64_lock);
+
     // struct krnl_t *krnl = caller->krnl;
 #ifdef MM64
     uint64_t *pte_ptr = get_pte_ptr(caller, pgn, 1);
     if (pte_ptr != NULL) {
         *pte_ptr = pte_val;
+        pthread_mutex_unlock(&mm64_lock);
         return 0;
     }
 #else
     krnl->mm->pgd[pgn] = pte_val;
 #endif
+    pthread_mutex_unlock(&mm64_lock);
     return -1;
 }
 
@@ -317,6 +329,9 @@ int vmap_pgd_memset(struct pcb_t *caller, // process call
         printf("vmap_pgd_memset: Invalid caller/mm pointer!\n");
         return -1;
     }
+
+    pthread_mutex_lock(&mm64_lock);
+
     int pgit = 0;
     uint64_t pattern = 0xdeadbeef;
     // struct krnl_t *krnl = caller->krnl;
@@ -333,6 +348,7 @@ int vmap_pgd_memset(struct pcb_t *caller, // process call
         if (pte_ptr != NULL) {
             *pte_ptr = pattern; // Ghi pattern vào đúng trang ảo tương ứng
         } else {
+            pthread_mutex_unlock(&mm64_lock);
             return -1;
         }
 #else
@@ -344,6 +360,8 @@ int vmap_pgd_memset(struct pcb_t *caller, // process call
         // Tịnh tiến địa chỉ ảo lên đúng 1 trang (4KB trong MM64)
         addr += PAGING64_PAGESZ;
     }
+
+    pthread_mutex_unlock(&mm64_lock);
 
     return 0;
 }
@@ -401,6 +419,8 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
         fpit = fpit->fp_next;
     }
 
+    pthread_mutex_lock(&mm64_lock);
+
     if (ret_rg != NULL) {
 #ifdef MM64
         ret_rg->rg_end = addr + pgit * PAGING64_PAGESZ; // Điểm kết thúc
@@ -408,6 +428,9 @@ addr_t vmap_page_range(struct pcb_t *caller,           // process call
         ret_rg->rg_end = addr + pgit * PAGING_PAGESZ;
 #endif
     }
+
+    pthread_mutex_unlock(&mm64_lock);
+
     return map_err;
 }
 
@@ -427,6 +450,9 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
     int alloc_success = 1;
     struct framephy_struct *newfp_str = NULL;
     struct framephy_struct *tail = *frm_lst;
+
+    pthread_mutex_lock(&mm64_lock);
+
     if (tail != NULL) {
         while (tail->fp_next != NULL)
             tail = tail->fp_next;
@@ -472,8 +498,10 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
             free(temp);
         }
         *frm_lst = NULL; // Đảm bảo con trỏ quay về NULL
+        pthread_mutex_unlock(&mm64_lock);
         return -3000;    // Trả về mã lỗi
     }
+    pthread_mutex_unlock(&mm64_lock);
     return 0;
 }
 
@@ -519,6 +547,8 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
         ret_alloc = -1; // Báo hiệu lỗi để return -1 ở cuối hàm
     }
 
+    pthread_mutex_lock(&mm64_lock);
+
     struct framephy_struct *curr = frm_lst;
     while (curr != NULL) {
         struct framephy_struct *temp = curr; // Giữ lại node hiện tại
@@ -529,6 +559,8 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
         }
         free(temp); // Giải phóng node hiện tại
     }
+
+    pthread_mutex_unlock(&mm64_lock);
 
     return (ret_alloc < 0) ? -1 : 0;
 }
@@ -622,30 +654,42 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller) {
 }
 
 struct vm_rg_struct *init_vm_rg(addr_t rg_start, addr_t rg_end) {
+    pthread_mutex_lock(&mm64_lock);
     struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
     if (rgnode == NULL) {
+        pthread_mutex_unlock(&mm64_lock);
         return NULL;
     }
     rgnode->rg_start = rg_start;
     rgnode->rg_end = rg_end;
     rgnode->rg_next = NULL;
 
+    pthread_mutex_unlock(&mm64_lock);
+
     return rgnode;
 }
 
 int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode) {
+    pthread_mutex_lock(&mm64_lock);
+
     rgnode->rg_next = *rglist;
     *rglist = rgnode;
+
+    pthread_mutex_unlock(&mm64_lock);
 
     return 0;
 }
 
 int enlist_pgn_node(struct pgn_t **plist, addr_t pgn) {
+    pthread_mutex_lock(&mm64_lock);
+
     struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
 
     pnode->pgn = pgn;
     pnode->pg_next = *plist;
     *plist = pnode;
+
+    pthread_mutex_unlock(&mm64_lock);
 
     return 0;
 }
