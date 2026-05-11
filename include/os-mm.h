@@ -117,6 +117,14 @@ struct mm_struct {
 
     /* kmem cache pool */
     struct kcache_pool_struct *kcpooltbl;
+
+#ifdef MM64
+    uint64_t pgtbl_walks;
+    uint64_t pgtbl_level_reads;
+    uint64_t pgtbl_level_writes;
+    uint64_t pgtbl_tables_allocated;
+    uint64_t pgtbl_storage_bytes;
+#endif
 };
 
 /*
