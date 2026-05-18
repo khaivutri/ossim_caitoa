@@ -518,6 +518,8 @@ addr_t __kmalloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t 
     if (krnl == NULL || size == 0) {
         return -1; // Lỗi: Không hợp lệ
     }
+    struct pcb_t kcaller = *caller;
+    kcaller.mm = caller->krnl->mm;
 #ifdef MM64
     int num_pages = (size + PAGING64_PAGESZ - 1) / PAGING64_PAGESZ;
     addr_t vaddr = (addr_t)rgid * PAGING64_PAGESZ * 1000;
@@ -539,10 +541,10 @@ addr_t __kmalloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t 
         addr_t pgn = current_vaddr >> PAGING64_ADDR_PT_SHIFT;
         /* Sử dụng hệ thống 5 cấp đã khai báo trong krnl_t */
         // Hàm get_pte_ptr sẽ dựa trên PAGING64_PAGESZ để bóc tách bit địa chỉ[cite: 2]
-        uint64_t *pte = get_pte_ptr(caller, pgn, 1);
+        uint64_t *pte = get_pte_ptr(&kcaller, pgn, 1);
 
         if (pte != NULL) {
-            if (pte_set_fpn(caller, pgn, fpn) != 0) {
+            if (pte_set_fpn(&kcaller, pgn, fpn) != 0) {
                 return -1; // Lỗi: Không thể ánh xạ trang ảo vào bảng trang
             }
             // Bật bit Present để MMU nhận diện trang hợp lệ
@@ -757,6 +759,9 @@ int __read_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, 
     if (caller == NULL || caller->krnl == NULL || data == NULL) {
         return -1;
     }
+    struct pcb_t kcaller = *caller;
+    kcaller.mm = caller->krnl->mm;
+
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID không hợp lệ
     }
@@ -792,7 +797,7 @@ int __read_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, 
     /* 5. Tra cứu Bảng phân trang để tìm Khung vật lý (Frame)
      * Dùng pte_get_entry để hỗ trợ cả 2 chiến lược pgd chung hoặc krnl_pgd riêng
      */
-    uint32_t pte = pte_get_entry(caller, pgn);
+    uint32_t pte = pte_get_entry(&kcaller, pgn);
 
     if (!PAGING_PAGE_PRESENT(pte)) {
         // Khác với User mem, Kernel mem bị miss page là lỗi nghiêm trọng
@@ -832,6 +837,8 @@ int __write_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset,
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
+    struct pcb_t kcaller = *caller;
+    kcaller.mm = caller->krnl->mm;
 
     struct mm_struct *mm = caller->krnl->mm;
     if (mm == NULL) {
@@ -863,7 +870,7 @@ int __write_kernel_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset,
 #endif
 
     /* 5. Tra cứu Bảng phân trang qua pte_get_entry */
-    uint32_t pte = pte_get_entry(caller, pgn);
+    uint32_t pte = pte_get_entry(&kcaller, pgn);
 
     if (!PAGING_PAGE_PRESENT(pte)) {
         // Kernel panic nếu bộ nhớ ảo của Kernel không được ánh xạ
@@ -905,7 +912,7 @@ int __read_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BY
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if(mm == NULL){
         return -1;
     }
@@ -970,7 +977,7 @@ int __write_user_mem(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, B
     if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
         return -1; // ID vùng nhớ (Region ID) không hợp lệ
     }
-    struct mm_struct *mm = caller->krnl->mm;
+    struct mm_struct *mm = caller->mm;
     if(mm == NULL){
         return -1;
     }
