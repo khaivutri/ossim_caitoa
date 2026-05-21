@@ -16,6 +16,9 @@
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
+
+pthread_mutex_t mm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #if !defined(MM64)
 /*
@@ -34,11 +37,14 @@ int init_pte(addr_t *pte,
              int swptyp, // swap type
              addr_t swpoff) // swap offset
 {
+  pthread_mutex_lock(&mm_lock);
+
   if (pre != 0) {
     if (swp == 0) { // Non swap ~ page online
-      if (fpn == 0)
+      if (fpn == 0){
+        pthread_mutex_unlock(&mm_lock);
         return -1;  // Invalid setting
-
+      }
       /* Valid setting with FPN */
       SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
       CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
@@ -56,6 +62,8 @@ int init_pte(addr_t *pte,
       SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
     }
   }
+
+  pthread_mutex_unlock(&mm_lock);
 
   return 0;
 }

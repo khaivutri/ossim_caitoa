@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <mm64.h>
+
+static pthread_mutex_t vm_Lock = PTHREAD_MUTEX_INITIALIZER;
+
 /*get_vma_by_num - get vm area by numID
  *@mm: memory region
  *@vmaid: ID vm area to alloc memory region
@@ -76,14 +79,17 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, ad
   */
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (cur_vma == NULL) return NULL;
+  pthread_mutex_lock(&vm_Lock);
   newrg = malloc(sizeof(struct vm_rg_struct));
   if (newrg == NULL) {
+      pthread_mutex_unlock(&vm_Lock);
       return NULL; // Lỗi: Hết RAM thực sự của máy tính
   }
   newrg->vmaid = vmaid;
   newrg->rg_start = cur_vma->sbrk;
   newrg->rg_end = newrg->rg_start + size;
   newrg->rg_next = NULL;
+  pthread_mutex_unlock(&vm_Lock);
   /* END TO-DO */
 
   return newrg;
@@ -156,8 +162,12 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   if (inc_sz == 0) {
       return 0; // Không cần làm gì cả, coi như thành công
   }
+
+  pthread_mutex_lock(&vm_Lock);
+
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (cur_vma == NULL) {
+      pthread_mutex_unlock(&vm_Lock);
       return -1; // Lỗi: Vùng nhớ yêu cầu nới rộng không tồn tại
   }
   //struct vm_rg_struct * newrg = malloc(sizeof(struct vm_rg_struct));
@@ -181,6 +191,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
     addr_t old_end = cur_vma->vm_end;
     addr_t new_end = old_end + inc_amt;
   if (validate_overlap_vm_area(caller, vmaid, old_end, new_end) < 0) {
+      pthread_mutex_unlock(&vm_Lock);
       return -1; /* Overlap and failed allocation */
   }
 
@@ -191,6 +202,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
    * now will be alloc real ram region */
   struct vm_rg_struct *newrg = malloc(sizeof(struct vm_rg_struct));
   if (newrg == NULL) {
+      pthread_mutex_unlock(&vm_Lock);
       return -1;
   }
   newrg->rg_start = old_end;
@@ -209,9 +221,10 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
       cur_vma->vm_end = old_end;
       cur_vma->sbrk -= inc_sz;
       free(newrg);
+      pthread_mutex_unlock(&vm_Lock);
       return -1; 
   }
-
+  pthread_mutex_unlock(&vm_Lock);
   return 0;
 }
 
