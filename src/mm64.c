@@ -32,6 +32,17 @@
 //     return proc->mm; // An toàn trả về không gian bộ nhớ của tiến trình
 // }
 #ifdef MM64
+#define PGTBL_TABLE_BYTES (PAGING64_DIR_ENTRIES * sizeof(uint64_t))
+
+static uint64_t *alloc_pgtbl_level(struct mm_struct *mm) {
+    uint64_t *tbl = (uint64_t *)calloc(PAGING64_DIR_ENTRIES, sizeof(uint64_t));
+    if (tbl != NULL && mm != NULL) {
+        mm->pgtbl_tables_allocated++;
+        mm->pgtbl_storage_bytes += PGTBL_TABLE_BYTES;
+    }
+    return tbl;
+}
+
 // Hàm Helper: Trả về địa chỉ con trỏ của PTE thật sự trong cây 5 cấp
 uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     if (caller == NULL || caller->mm == NULL)
@@ -48,11 +59,15 @@ uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     if (mm->pgd == NULL)
         return NULL; // Root chưa được khởi tạo
 
+    mm->pgtbl_walks++;
+
     // Tầng 1: PGD -> P4D
+    mm->pgtbl_level_reads++;
     if (mm->pgd[pgd] == 0) {
         if (!is_alloc)
             return NULL; // Nếu chỉ đọc mà chưa cấp phát thì trả về NULL
-        mm->pgd[pgd] = (uint64_t)calloc(PAGING64_DIR_ENTRIES, sizeof(uint64_t));
+        mm->pgd[pgd] = (uint64_t)alloc_pgtbl_level(mm);
+        mm->pgtbl_level_writes++;
         // Xử lý lỗi cấp phát thất bại
         if (mm->pgd[pgd] == 0)
             return NULL;
@@ -60,10 +75,12 @@ uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     uint64_t *p4d_tbl = (uint64_t *)mm->pgd[pgd];
 
     // Tầng 2: P4D -> PUD
+    mm->pgtbl_level_reads++;
     if (p4d_tbl[p4d] == 0) {
         if (!is_alloc)
             return NULL;
-        p4d_tbl[p4d] = (uint64_t)calloc(PAGING64_DIR_ENTRIES, sizeof(uint64_t));
+        p4d_tbl[p4d] = (uint64_t)alloc_pgtbl_level(mm);
+        mm->pgtbl_level_writes++;
         // Xử lý lỗi cấp phát thất bại
         if (p4d_tbl[p4d] == 0)
             return NULL;
@@ -71,10 +88,12 @@ uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     uint64_t *pud_tbl = (uint64_t *)p4d_tbl[p4d];
 
     // Tầng 3: PUD -> PMD
+    mm->pgtbl_level_reads++;
     if (pud_tbl[pud] == 0) {
         if (!is_alloc)
             return NULL;
-        pud_tbl[pud] = (uint64_t)calloc(PAGING64_DIR_ENTRIES, sizeof(uint64_t));
+        pud_tbl[pud] = (uint64_t)alloc_pgtbl_level(mm);
+        mm->pgtbl_level_writes++;
         // Xử lý lỗi cấp phát thất bại
         if (pud_tbl[pud] == 0)
             return NULL;
@@ -82,10 +101,12 @@ uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     uint64_t *pmd_tbl = (uint64_t *)pud_tbl[pud];
 
     // Tầng 4: PMD -> PT
+    mm->pgtbl_level_reads++;
     if (pmd_tbl[pmd] == 0) {
         if (!is_alloc)
             return NULL;
-        pmd_tbl[pmd] = (uint64_t)calloc(PAGING64_DIR_ENTRIES, sizeof(uint64_t));
+        pmd_tbl[pmd] = (uint64_t)alloc_pgtbl_level(mm);
+        mm->pgtbl_level_writes++;
         // Xử lý lỗi cấp phát thất bại
         if (pmd_tbl[pmd] == 0)
             return NULL;
@@ -93,6 +114,7 @@ uint64_t *get_pte_ptr(struct pcb_t *caller, addr_t pgn, int is_alloc) {
     uint64_t *pt_tbl = (uint64_t *)pmd_tbl[pmd];
 
     // Tầng 5: Trả về địa chỉ của Entry chứa thông tin trang
+    mm->pgtbl_level_reads++;
     return &pt_tbl[pt];
 }
 #endif
@@ -214,6 +236,7 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff) {
     // Ghi thông tin thiết bị Swap
     SETVAL(*pte, swptyp, PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT);
     SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
+    caller->mm->pgtbl_level_writes++;
 
     return 0;
 }
@@ -246,6 +269,7 @@ int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn) {
     SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
     CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
     SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
+    caller->mm->pgtbl_level_writes++;
 
     return 0;
 }
@@ -297,6 +321,7 @@ int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
     uint64_t *pte_ptr = get_pte_ptr(caller, pgn, 1);
     if (pte_ptr != NULL) {
         *pte_ptr = pte_val;
+        caller->mm->pgtbl_level_writes++;
         return 0;
     }
 #else
@@ -332,6 +357,7 @@ int vmap_pgd_memset(struct pcb_t *caller, // process call
 
         if (pte_ptr != NULL) {
             *pte_ptr = pattern; // Ghi pattern vào đúng trang ảo tương ứng
+            caller->mm->pgtbl_level_writes++;
         } else {
             return -1;
         }
@@ -577,6 +603,12 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller) {
         return -1;
     }
 
+    mm->pgtbl_walks = 0;
+    mm->pgtbl_level_reads = 0;
+    mm->pgtbl_level_writes = 0;
+    mm->pgtbl_tables_allocated = 1;
+    mm->pgtbl_storage_bytes = PGTBL_TABLE_BYTES;
+
     // Cây phân trang sẽ tự mọc ra khi có dữ liệu.
     mm->p4d = NULL;
     mm->pud = NULL;
@@ -727,9 +759,17 @@ int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end) {
     uint64_t *p4d_tbl = pgd_tbl ? (uint64_t *)pgd_tbl[0] : NULL;
     uint64_t *pud_tbl = p4d_tbl ? (uint64_t *)p4d_tbl[0] : NULL;
     uint64_t *pmd_tbl = pud_tbl ? (uint64_t *)pud_tbl[0] : NULL;
+    uint64_t *pt_tbl = pmd_tbl ? (uint64_t *)pmd_tbl[0] : NULL;
 
     // In ra 1 dòng chuẩn xác
-    printf(" PDG=%p P4g=%p PUD=%p PMD=%p\n", (void *)pgd_tbl, (void *)p4d_tbl, (void *)pud_tbl, (void *)pmd_tbl);
+    printf(" PDG=%p P4g=%p PUD=%p PMD=%p PT=%p\n", (void *)pgd_tbl, (void *)p4d_tbl, (void *)pud_tbl, (void *)pmd_tbl, (void *)pt_tbl);
+    printf(" pgtbl_stats: walks=%lu level_reads=%lu level_writes=%lu total_accesses=%lu tables=%lu storage_bytes=%lu\n",
+           (unsigned long)caller->mm->pgtbl_walks,
+           (unsigned long)caller->mm->pgtbl_level_reads,
+           (unsigned long)caller->mm->pgtbl_level_writes,
+           (unsigned long)(caller->mm->pgtbl_level_reads + caller->mm->pgtbl_level_writes),
+           (unsigned long)caller->mm->pgtbl_tables_allocated,
+           (unsigned long)caller->mm->pgtbl_storage_bytes);
 
     return 0;
 }

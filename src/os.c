@@ -148,24 +148,26 @@ static void *ld_routine(void *args) {
             next_slot(timer_id);
         }
 #ifdef MM_PAGING
-        // krnl->mm = malloc(sizeof(struct mm_struct));
-        // init_mm(krnl->mm, proc);
-        // krnl->mram = mram;
-        // krnl->mswp = mswp;
-        // krnl->active_mswp = active_mswp;
+        if (krnl->mm == NULL) {
+            krnl->mm = malloc(sizeof(struct mm_struct));
+            if (krnl->mm == NULL || init_mm(krnl->mm, proc) != 0) {
+                return NULL;
+            }
+        }
+        krnl->mram = mram;
+        krnl->mswp = mswp;
+        krnl->active_mswp = active_mswp;
 
         // Cấp phát vùng nhớ riêng cho tiến trình này
         proc->mm = malloc(sizeof(struct mm_struct));
-        init_mm(proc->mm, proc);
+        if (proc->mm == NULL || init_mm(proc->mm, proc) != 0) {
+            return NULL;
+        }
 
         // Ghi danh (Register): Kernel lưu lại bộ nhớ này dưới tên của PID đó
         krnl->proc_table[proc->pid] = proc;
 
-        if (krnl->mram == NULL) {
-            krnl->mram = mram;
-            krnl->mswp = mswp;
-            krnl->active_mswp = active_mswp;
-        }
+
 #endif
         printf("\tLoaded a process at %s, PID: %d PRIO: %ld\n", ld_processes.path[i], proc->pid, ld_processes.prio[i]);
         add_proc(proc);
