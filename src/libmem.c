@@ -293,7 +293,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller) 
     int off = addr & ((1 << PAGING64_ADDR_PT_SHIFT) - 1); // Nếu sau này cần tính offset
 #else
     int pgn = PAGING_PGN(addr);
-// int off = PAGING_OFFST(addr);
+    int off = PAGING_OFFST(addr);
 #endif
     int fpn;
     int phyaddr;
@@ -334,8 +334,8 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller) 
     int pgn = addr >> PAGING64_ADDR_PT_SHIFT;
     int off = addr & ((1 << PAGING64_ADDR_PT_SHIFT) - 1); // Lấy phần đuôi (12 bit) làm offset
 #else
-    pgn = PAGING_PGN(addr);
-    off = PAGING_OFFST(addr);
+    int pgn = PAGING_PGN(addr);
+    int off = PAGING_OFFST(addr);
 #endif
     int fpn;
     /* Get the page to MEMRAM, swap from MEMSWAP if needed */
@@ -528,6 +528,7 @@ addr_t __kmalloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t 
     addr_t vaddr = (addr_t)rgid * PAGING_PAGESZ * 1000;
 #endif
 
+#ifdef MM64
     /* 3. Cấp phát RAM và Ánh xạ vào hệ thống phân trang 5 cấp */
     for (int i = 0; i < num_pages; i++) {
         addr_t fpn;
@@ -555,6 +556,7 @@ addr_t __kmalloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t 
     }
 
     *alloc_addr = vaddr;
+#endif
     return 0;
 }
 
