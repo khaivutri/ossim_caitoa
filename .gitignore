@@ -54,8 +54,6 @@ dkms.conf
 # debug information files
 *.dwo
 
-#documents
-docs/
 
 #config
 compile_flags.txt
